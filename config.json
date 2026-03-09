@@ -1,0 +1,9 @@
+{
+    "n_grid_points": 1000,
+    "margin_from_points": 40,
+    "margin_type": "percent",
+    "background_sqm": 22.02,
+    "natural_background_skyglow": 0.0002,
+    "default_ligth_power": 100,
+    "default_ligth_efficiency": 98
+}
