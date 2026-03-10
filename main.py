@@ -77,16 +77,17 @@ def points_to_geodf(points: GeometryArray, sqm:ndarray):
     geo_df = GeoDataFrame(d)
     return geo_df
 
-def export(geo_df: GeoDataFrame, grid_config: GridConfig, output_path: Path|None=None):
-    if output_path == None:
-        output_dir = RESOULTS_PATH
-        time = datetime.now().strftime(format="%Y_%m_%d %H_%M_%S")
-        output_filename = "{}_points_{}_{}".format(
-            grid_config.n_grid_points, 
-            grid_config.margin_from_points,
-            grid_config.margin_fn.__name__)
-        name=f"{output_filename}_{time}.shp"
-        output_path = output_dir / name
+def build_output_path(output_dir: Path, grid_config: GridConfig) -> Path:
+    time = datetime.now().strftime(format="%Y_%m_%d %H_%M_%S")
+    filename = "{}_points_{}_{}_{}.shp".format(
+        grid_config.n_grid_points,
+        grid_config.margin_from_points,
+        grid_config.margin_fn.__name__,
+        time
+    )
+    return output_dir / filename
+
+def export(geo_df: GeoDataFrame, output_path: Path) -> Path:
     geo_df.to_file(output_path)
     return output_path
 
@@ -162,9 +163,8 @@ def ask_for_input():
         raise FileNotFoundError(f"No se encontró el archivo en {points_path}")
     return points_path
 
-def ask_for_output_dir():
-    output_dir = input()
-    output_dir = clean_path_sting(output_dir)
+def ask_for_output_dir(output_dir_str: str) -> Path:
+    output_dir = clean_path_sting(output_dir_str)
     if not output_dir.exists():
         raise DirectoryNotFoundError(output_dir)
     if not output_dir.is_dir():
@@ -246,146 +246,167 @@ def get_file(file_path: Path) -> GeoFile|None:
     }
     return file_transport.get(file_type)
 
-def filter_process(file: GeoFile) -> GeoFile:
-    filter_by = input(f"¿Desea filtrar los datos? (s/n):\n")
-    if filter_by.lower() != "s":
-        return file
-    column = input(f"¿Cuál es el índice de la columna a filtrar? Las columnas disponibles son: {file.columns}\n")
+def ask_until_valid(
+        prompt: str, 
+        validator: Callable, 
+        error_msg: str = "Valor inválido. Intente nuevamente."):
     while True:
+        value = input(prompt)
         try:
-            if column.isdigit() and 0 <= int(column) < len(file.columns):
-                column = file.columns[int(column)]
-                break
-            else:
-                print("Índice de columna inválido. Intente nuevamente.")
-        except ColumnNotFoundError as e:
-            print(e.message)
-            print("Intente nuevamente.")
-    print(f"Columna seleccionada: {column}")
-    valid_filters = file.valids_to_filter_values(column)
-    print(f"¿Cuál es el valor que debe tener la columna {(column)} para filtrar los datos?")
-    equals_to = input(f"Las opciones disponibles son: {valid_filters}\n")
-    while True:
-        if str(equals_to) in [str(v) for v in valid_filters]:
-            break
-        else:
-            equals_to = input("Valor inválido. Intente nuevamente.\n")
-    print(f"Filtrando los datos por {column} igual a {equals_to} ...")
-    return file.filter_data(column, equals_to)       
+            result = validator(value)
+            if result is not None:
+                return result
+        except (ValueError, ColumnNotFoundError):
+            pass
+        print(error_msg)
 
-def new_grid_config_process() -> GridConfig|None:
-    print("¿Desea cambiar la configuración de la grilla? (s/n)")
-    change_grid_config = input()
-    if change_grid_config.lower() != "s":
+def filter_process(file: GeoFile) -> GeoFile:
+    if input("¿Desea filtrar los datos? (s/n):\n").lower() != "s":
+        return file
+
+    column = ask_until_valid(
+        prompt=f"¿Cuál es el índice de la columna a filtrar? Las columnas disponibles son: {file.columns}\n",
+        validator=lambda v: file.columns[int(v)] if v.isdigit() and 0 <= int(v) < len(file.columns) else None,
+        error_msg="Índice de columna inválido. Intente nuevamente."
+    )
+    print(f"Columna seleccionada: {column}")
+
+    valid_filters = file.valids_to_filter_values(column)
+    equals_to = ask_until_valid(
+        prompt=f"Las opciones disponibles son: {valid_filters}\n",
+        validator=lambda v: v if str(v) in [str(f) for f in valid_filters] else None,
+        error_msg="Valor inválido. Intente nuevamente."
+    )
+
+    print(f"Filtrando los datos por {column} igual a {equals_to} ...")
+    return file.filter_data(column, equals_to)
+
+
+def new_grid_config_process() -> GridConfig | None:
+    if input("¿Desea cambiar la configuración de la grilla? (s/n)\n").lower() != "s":
         return None
-    n_grid_points = input("Ingrese el número de puntos para la grilla (ej: 1000): \n")
-    while True:
-        if n_grid_points.isdigit() and int(n_grid_points) > 0:
-            n_grid_points = int(n_grid_points)
-            break
-        else:
-            n_grid_points = input("Número de puntos inválido. Intente nuevamente: \n")
-    margin_from_points = input("Ingrese el margen desde los puntos para la grilla (ej: 40): \n")
-    while True:
-        try:
-            margin_from_points = float(margin_from_points)
-            break
-        except ValueError:
-            margin_from_points = input("Margen inválido. Intente nuevamente: \n")
-    margin_fn = input("Ingrese el tipo de margen (percentage o flat): \n")
-    while True:
-        if margin_fn in MARGIN_FN_DICT.keys():
-            break
-        else:
-            margin_fn = input("Tipo de margen inválido. Intente nuevamente: \n")
+
+    n_grid_points = ask_until_valid(
+        prompt="Ingrese el número de puntos para la grilla (ej: 1000): \n",
+        validator=lambda v: int(v) if v.isdigit() and int(v) > 0 else None,
+        error_msg="Número de puntos inválido. Intente nuevamente."
+    )
+    margin_from_points = ask_until_valid(
+        prompt="Ingrese el margen desde los puntos para la grilla (ej: 40): \n",
+        validator=lambda v: float(v),  # lanza ValueError si falla
+        error_msg="Margen inválido. Intente nuevamente."
+    )
+    margin_fn = ask_until_valid(
+        prompt="Ingrese el tipo de margen (percentage o flat): \n",
+        validator=lambda v: MARGIN_FN_DICT[v] if v in MARGIN_FN_DICT else None,
+        error_msg="Tipo de margen inválido. Intente nuevamente."
+    )
+
     return GridConfig(
         n_grid_points=n_grid_points,
         margin_from_points=margin_from_points,
-        margin_fn=MARGIN_FN_DICT[margin_fn]
-    ) 
+        margin_fn=margin_fn
+    )
     
+def load_file() -> GeoFile:
+    while True:
+        file_path = ask_for_input()
+        file = get_file(file_path)
+        if file is not None:
+            return file
+        print(f"Archivo no soportado: {file_path}. Intente nuevamente.")
+
+def select_layer(file: GPKGFile) -> GPKGFile:
+    print(f"El archivo contiene las siguientes capas:\n{file.layers}")
+    print("Recuerde que sólo las capas con geometría de puntos pueden ser utilizadas.")
+    return ask_until_valid(
+        prompt="Ingrese el índice de la capa a leer:\n",
+        validator=lambda v: file.set_layer(v),
+        error_msg="Índice de capa inválido. Intente nuevamente."
+    )
+
+def validate_columns(file: GeoFile, attributes_names: AttributeNames):
+    try:
+        file._validate_column(attributes_names.power)
+        file._validate_column(attributes_names.eficiency)
+    except ColumnNotFoundError as e:
+        print(e.message)
+        print("Asegúrese de que el archivo contenga las columnas necesarias ({} y {})".format(
+            attributes_names.power, attributes_names.eficiency))
+        print("o actualice los nombres en el archivo de configuración.")
+        exit(1)
+
+def build_grid(ligths: GeoDataFrame, grid_config: GridConfig) -> tuple[Grid, ndarray, ndarray]:
+    x_limits, y_limits = grid_range_from_geodf(
+        geo_df=ligths,
+        margin=grid_config.margin_from_points,
+        margin_fn=grid_config.margin_fn
+    )
+    grid = Grid(
+        *x_limits, *y_limits,
+        x_points=grid_config.n_grid_points,
+        y_points=grid_config.n_grid_points
+    )
+    xv, yv = grid.values
+    print(f"Grilla creada — {grid_config.n_grid_points=}, {xv.shape=}")
+    return grid, xv, yv
+
 def main():
     start_time = datetime.now()
     print("IluminaRA iniciado")
+
     config = get_default_config()
     sqm_config = get_sqm_config(config)
     grid_config = get_grid_config(config)
     attributes_names = get_attribute_names(config)
+
     try:
-        try:
-            while True:
-                file_path = ask_for_input()
-                file = get_file(file_path)
-                if file is None:
-                    raise ValueError(f"Archivo no soportado: {file_path}")
-                break
-        except ValueError as e:
-            print(e)
-            exit(1)
-        print("¿Donde desea guardar el archivo resultante? Ingrese la ruta a continuación.")
-        while True:
-            try:
-                output_dir = ask_for_output_dir()
-                global RESOULTS_PATH
-                RESOULTS_PATH = output_dir
-                break
-            except PathError as e:
-                print(e.message)
-                print("Intente nuevamente.")
+        # Carga del archivo
+        file = load_file()
+
+        # Directorio de salida
+        print("¿Dónde desea guardar el archivo resultante?")
+        output_dir: Path = ask_until_valid(
+            prompt="Ingrese la ruta:\n",
+            validator=lambda v: ask_for_output_dir(v),  
+            error_msg="Directorio inválido. Intente nuevamente."
+        )
+
+        # Selección de capa (solo GPKG)
         if isinstance(file, GPKGFile):
-            print(f"El archivo {file_path.name} contiene las siguientes capas: \n{file.layers}")
-            print("Recuerde que sólo las capas con geometría de puntos pueden ser utilizadas para el cálculo del SQM.")
-            layer = input("Ingrese el índice de la capa a leer: \n")
-            while True:
-                try:
-                    file = file.set_layer(layer)
-                    break
-                except ValueError as e:
-                    layer = input("Índice de capa inválido. Intente nuevamente: \n")
-        try:
-            file._validate_column(attributes_names.power)
-            file._validate_column(attributes_names.eficiency)
-        except ColumnNotFoundError as e:
-            print(e.message)
-            print("Asegúrese de que el archivo contenga las columnas necesarias para calcular el flujo luminoso ({} y {})".format(
-                attributes_names.power, attributes_names.eficiency))
-            print("o actualice los nombres de las columnas en el archivo de configuración.")
-            exit(1)
-        try:
-            filtered = filter_process(file)
-        except KeyboardInterrupt:
-            print("Proceso de filtrado interrumpido por el usuario.")
-            return file
+            file = select_layer(file)
+
+        # Validación de columnas
+        validate_columns(file, attributes_names)
+
+        # Filtrado
+        filtered = filter_process(file)
         ligths = filtered.geodata
-        print(f"{ligths.shape[0]} Fuentes en total")
-        print("¿Deseas cambiar la configuración de la grilla? (s/n)")
-        x_limits, y_limts = grid_range_from_geodf(
-            geo_df=ligths, 
-            margin=grid_config.margin_from_points,
-            margin_fn=grid_config.margin_fn
-            )
-        grid = Grid(
-            *x_limits,
-            *y_limts,
-            x_points=grid_config.n_grid_points,
-            y_points=grid_config.n_grid_points
-            )
-        xv, yv = grid.values
-        print(f"""Grilla creada
-            {grid_config.n_grid_points=}
-            {grid_config.margin_from_points=}
-            {xv.shape=}""")
+        print(f"{ligths.shape[0]} fuentes en total")
+
+        # Configuración de grilla (opcional)
+        new_config = new_grid_config_process()
+        if new_config:
+            grid_config = new_config
+
+        # Cálculo
+        grid, xv, yv = build_grid(ligths, grid_config)
         scene = Scene()
         print("Calculando SQM ...")
         sqm = build_sqm_defined_ligths(scene, grid, ligths, attributes_names, sqm_config)
+
+        # Exportación
         points = array2points(xv, yv)
         geo_df = points_to_geodf(points, sqm)
-        output_path = export(geo_df=geo_df, grid_config=grid_config)
-        print(f"Archivo exportado en {RESOULTS_PATH.name} como {output_path.name}")
-        end_time = datetime.now()
-        print(f"Proceso terminado en {(end_time-start_time).seconds} segundos.")
+        output_path = build_output_path(output_dir, grid_config)
+        export(geo_df, output_path)
+        print(f"Archivo exportado en {output_dir.name} como {output_path.name}")
+
+        elapsed = (datetime.now() - start_time).seconds
+        print(f"Proceso terminado en {elapsed} segundos.")
+
     except KeyboardInterrupt:
-        print("Proceso interrumpoido por el usuario.")
+        print("\nProceso interrumpido por el usuario.")
         exit()
 
 if __name__ == "__main__":
