@@ -1,9 +1,11 @@
 {
     "n_grid_points": 1000,
     "margin_from_points": 40,
-    "margin_type": "percent",
+    "margin_type": "percentage",
     "background_sqm": 22.02,
     "natural_background_skyglow": 0.0002,
     "default_ligth_power": 100,
-    "default_ligth_efficiency": 98
+    "default_ligth_efficiency": 98,
+    "default_power_columname": "Potencia",
+    "default_efficiency_columname": "eficiencia"
 }
