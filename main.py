@@ -313,7 +313,7 @@ def load_file() -> GeoFile:
 
 def select_layer(file: GPKGFile) -> GPKGFile:
     print(f"El archivo contiene las siguientes capas:\n{file.layers}")
-    print("Recuerde que sólo las capas con geometría de puntos pueden ser utilizadas.")
+    print("Recuerde que sólo las capas con geometría de puntos (no multipuntos) pueden ser utilizadas.")
     return ask_until_valid(
         prompt="Ingrese el índice de la capa a leer:\n",
         validator=lambda v: file.set_layer(v),
