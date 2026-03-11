@@ -6,7 +6,7 @@ from geo import (
     limit, x_y_limits
     )
 from state import State, Event, machine, FileType, get_file_type
-from errors import ColumnNotFoundError, DirectoryNotFoundError, PathError
+from errors import ColumnNotFoundError, DirectoryNotFoundError
 
 from typing import  Self, Callable
 from pathlib import Path
@@ -178,7 +178,6 @@ class GeoFile:
         return get_file_type(self.file_path)
 
     @property
-    @lru_cache
     def geodata(self) -> GeoDataFrame:
         if self._geo_data is None:
             self._geo_data = read_file(
@@ -188,7 +187,6 @@ class GeoFile:
         return self._geo_data
     
     @property
-    @lru_cache
     def columns(self):
         cols = self.geodata.columns.to_list()
         cols.remove("geometry")
@@ -269,7 +267,7 @@ def filter_process(file: GeoFile) -> GeoFile:
     valid_filters = file.valids_to_filter_values(column)
     equals_to = ask_until_valid(
         prompt=f"Las opciones disponibles son: {valid_filters}\n",
-        validator=lambda v: v if str(v) in [str(f) for f in valid_filters] else None,
+        validator=validate_filter,
         error_msg="Valor inválido. Intente nuevamente."
     )
 
