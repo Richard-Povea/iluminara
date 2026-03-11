@@ -265,6 +265,14 @@ def filter_process(file: GeoFile) -> GeoFile:
     print(f"Columna seleccionada: {column}")
 
     valid_filters = file.valids_to_filter_values(column)
+    def validate_filter(v: str):
+        # Castear al tipo real de los valores de la columna
+        col_type = type(valid_filters[0])
+        try:
+            casted = col_type(v)
+        except (ValueError, TypeError):
+            return None
+        return casted if casted in valid_filters else None
     equals_to = ask_until_valid(
         prompt=f"Las opciones disponibles son: {valid_filters}\n",
         validator=validate_filter,
