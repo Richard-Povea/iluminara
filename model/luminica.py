@@ -1,5 +1,6 @@
 from numpy import log10, pi, ndarray
 from dataclasses import dataclass
+from typing import Callable
 
 @dataclass
 class Light:
@@ -29,6 +30,17 @@ def cd_per_m2_to_sqm_astroshop(cd_per_m2: ndarray) -> ndarray:
     # return SQM in [mag/arcseg2]
     sky_quality_magnitude = -2.5 * log10(cd_per_m2 / 10.8e4)
     return sky_quality_magnitude
+
+CD_2_SQM_DICT = {
+    "zotti": cd_per_m2_to_sqm_zotti,
+    "astroshop": cd_per_m2_to_sqm_astroshop
+}
+
+@dataclass
+class SQMConfig:
+    cd_2_sqm: Callable[[ndarray], ndarray]
+    natural_bg_skyglow: float
+    background_sqm: float
 
 ##################################################################
 # Fuente Luminosa
