@@ -1,5 +1,5 @@
 from model.model import Scene, Grid, get_skyglow
-from model.luminica import ModifiedLightSourceAlbersDuricoe,cd_per_m2_to_sqm_zotti
+from model.luminica import ModifiedLightSourceAlbersDuricoe, SQMConfig, CD_2_SQM_DICT
 from geo import (
     array2points, grid_range_from_geodf, 
     flat_margin, percentage_margin,
@@ -47,11 +47,6 @@ class GridConfig:
 class AttributeNames:
     power: str
     eficiency: str
-
-@dataclass
-class SQMConfig:
-    natural_bg_skyglow: float
-    background_sqm: float
 
 def get_grid_config(default_config: dict) -> GridConfig:
     return GridConfig(
