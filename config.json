@@ -1,4 +1,5 @@
 {
+    "cd_2_sqm": "astroshop",
     "n_grid_points": 1000,
     "margin_from_points": 40,
     "margin_type": "percentage",
