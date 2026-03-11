@@ -57,6 +57,7 @@ def get_grid_config(default_config: dict) -> GridConfig:
 
 def get_sqm_config(default_config: dict) -> SQMConfig:
     return SQMConfig(
+        cd_2_sqm=CD_2_SQM_DICT[default_config["cd_2_sqm"]],
         natural_bg_skyglow=default_config["natural_background_skyglow"],
         background_sqm=default_config["background_sqm"]
     )
@@ -96,7 +97,7 @@ def add_light_source(scene: Scene, x:float, y:float, light_flux:int):
 def get_sqm(scene: Scene, grid:Grid, sqm_config: SQMConfig):
     skyglow_albers_duricoe = get_skyglow(scene, grid, omega=2*pi)
     skyglow_albers_duricoe += sqm_config.natural_bg_skyglow
-    sqm = cd_per_m2_to_sqm_zotti(skyglow_albers_duricoe)
+    sqm = sqm_config.cd_2_sqm(skyglow_albers_duricoe)
     
     sqm[sqm > sqm_config.background_sqm] = sqm_config.background_sqm
     return sqm
