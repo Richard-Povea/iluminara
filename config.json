@@ -2,7 +2,7 @@
     "cd_2_sqm": "astroshop",
     "n_grid_points": 1000,
     "margin_from_points": 40,
-    "margin_type": "percentage",
+    "margin_type": "flat",
     "background_sqm": 22.02,
     "natural_background_skyglow": 0.0002,
     "default_ligth_power": 100,
