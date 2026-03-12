@@ -8,6 +8,8 @@ from pathlib import Path
 
 from state import FileType, get_file_type
 from errors import ColumnNotFoundError
+from logger import get_logger
+from config import AttributeNames
 
 type limit = Iterable[float]
 type x_y_limits = Iterable[limit]
@@ -159,3 +161,21 @@ def points_to_geodf(points: GeometryArray, sqm: ndarray):
     d = {"Value": sqm.flat, "geometry": points}
     geo_df = GeoDataFrame(d)
     return geo_df
+
+def validate_columns(file: GeoFile, attributes_names: AttributeNames):
+    log = get_logger()
+    try:
+        file._validate_column(attributes_names.power)
+        file._validate_column(attributes_names.eficiency)
+        log.debug(f"Columnas validadas: power={attributes_names.power!r}, eficiency={attributes_names.eficiency!r}")
+    except ColumnNotFoundError as e:
+        log.error(f"Columna no encontrada: {e.message}")
+        log.error(
+            f"El archivo debe contener las columnas {attributes_names.power!r} y {attributes_names.eficiency!r}. "
+            "Verifique el archivo de configuración."
+        )
+        print(e.message)
+        print("Asegúrese de que el archivo contenga las columnas necesarias ({} y {})".format(
+            attributes_names.power, attributes_names.eficiency))
+        print("o actualice los nombres en el archivo de configuración.")
+        exit(1)
