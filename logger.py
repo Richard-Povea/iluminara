@@ -32,7 +32,7 @@ def setup_logger(log_dir: Path | None = None, level: int = logging.DEBUG) -> log
 
     # --- Handler de consola ---
     console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setLevel(logging.INFO)
+    console_handler.setLevel(logging.WARNING)
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
 
