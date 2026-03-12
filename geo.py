@@ -2,7 +2,7 @@ from geopandas import GeoDataFrame
 from geopandas import read_file, list_layers, points_from_xy
 from geopandas.array import GeometryArray
 from numpy import ndarray
-from typing import Callable, Iterable, Self
+from typing import Callable, Self
 from functools import lru_cache
 from pathlib import Path
 
@@ -10,38 +10,7 @@ from state import FileType, get_file_type
 from errors import ColumnNotFoundError
 from logger import get_logger
 from config import AttributeNames
-
-type limit = Iterable[float]
-type x_y_limits = Iterable[limit]
-
-def get_new_limts(limits: limit, margin: limit) -> limit:
-    new_limits: limit = [coord + delta for coord, delta in zip(limits, margin)]
-    return new_limits
-
-def flat_margin(
-        margin: int,
-        x_limits: limit, 
-        y_limits: limit,
-        ) -> x_y_limits:
-    margin_tuple = (-margin, margin)
-    new_x_limits = get_new_limts(x_limits, margin_tuple)
-    new_y_limits = get_new_limts(y_limits, margin_tuple)
-    return new_x_limits, new_y_limits
-
-def percentage_margin(
-        margin: float,
-        x_limits: limit, 
-        y_limits: limit,
-        ) -> x_y_limits:
-    x_min, x_max = x_limits
-    y_min, y_max = y_limits
-    x_range = x_max - x_min
-    y_range = y_max - y_min
-    range_as_per = max(x_range, y_range)*margin/100
-    margin_tuple = (-range_as_per, range_as_per)
-    new_x_limits = get_new_limts(x_limits, margin_tuple)
-    new_y_limits = get_new_limts(y_limits, margin_tuple)
-    return new_x_limits, new_y_limits
+from geo_types import limit, x_y_limits
 
 def get_points_range_from_shapefile(geo_df: GeoDataFrame) -> tuple[float, float, float, float]:
     # shape: desde geopandas gpd.read_file(...)
