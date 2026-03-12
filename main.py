@@ -95,7 +95,7 @@ def add_light_source(scene: Scene, x:float, y:float, light_flux:int):
     scene.add_light_source(light_source)
 
 def get_sqm(scene: Scene, grid:Grid, sqm_config: SQMConfig):
-    skyglow_albers_duricoe = get_skyglow(scene, grid, omega=2*pi)
+    skyglow_albers_duricoe = get_skyglow(scene, grid)
     skyglow_albers_duricoe += sqm_config.natural_bg_skyglow
     sqm = sqm_config.cd_2_sqm(skyglow_albers_duricoe)
     
