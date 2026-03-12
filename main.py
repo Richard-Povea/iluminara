@@ -1,74 +1,27 @@
 from model.model import Scene, Grid, get_skyglow
-from model.luminica import ModifiedLightSourceAlbersDuricoe, SQMConfig, CD_2_SQM_DICT
+from model.luminica import ModifiedLightSourceAlbersDuricoe
 from geo import (
-    array2points, grid_range_from_geodf,
-    flat_margin, percentage_margin,
-    limit, x_y_limits
+    array2points, grid_range_from_geodf
 )
 from state import State, Event, machine, FileType, get_file_type
 from errors import ColumnNotFoundError, DirectoryNotFoundError
 from logger import setup_logger, get_logger
+from config import AttributeNames, GridConfig, SQMConfig, MARGIN_FN_DICT, get_grid_config, get_sqm_config
 
 from typing import Self, Callable
 from pathlib import Path
-from numpy import pi, ndarray
+from numpy import ndarray
 from datetime import datetime
 from geopandas import read_file, list_layers, GeoDataFrame
 from geopandas.array import GeometryArray
 from shapely import Point
 from functools import lru_cache
 
-MARGIN_FN_DICT = {
-    "percentage": percentage_margin,
-    "flat": flat_margin
-}
-
-
 def get_default_config() -> dict:
     import json
     with open("config.json", "r") as f:
         config = json.load(f)
     return config
-
-
-from dataclasses import dataclass
-
-
-@dataclass
-class GridConfig:
-    n_grid_points: int
-    margin_from_points: float
-    margin_fn: Callable[[int | float, limit, limit], x_y_limits]
-
-    def __str__(self) -> str:
-        return f"""GridConfig(
-            n_grid_points={self.n_grid_points},
-            margin_from_points={self.margin_from_points},
-            margin_fn={self.margin_fn}
-        )"""
-
-
-@dataclass
-class AttributeNames:
-    power: str
-    eficiency: str
-
-
-def get_grid_config(default_config: dict) -> GridConfig:
-    return GridConfig(
-        n_grid_points=default_config["n_grid_points"],
-        margin_from_points=default_config["margin_from_points"],
-        margin_fn=MARGIN_FN_DICT[default_config["margin_type"]]
-    )
-
-
-def get_sqm_config(default_config: dict) -> SQMConfig:
-    return SQMConfig(
-        cd_2_sqm=CD_2_SQM_DICT[default_config["cd_2_sqm"]],
-        natural_bg_skyglow=default_config["natural_background_skyglow"],
-        background_sqm=default_config["background_sqm"]
-    )
-
 
 def get_attribute_names(default_config: dict) -> AttributeNames:
     return AttributeNames(
