@@ -1,39 +1,20 @@
-from model.model import Scene, Grid
+from model.model import Scene
 from geo import (
-    array2points, grid_range_from_geodf
-)
-from state import State, Event, machine, FileType, get_file_type
+    GeoFile, GPKGFile, array2points,
+    get_geofile, export, points_to_geodf
+    )
 from errors import ColumnNotFoundError, DirectoryNotFoundError
 from logger import setup_logger, get_logger
-from config import AttributeNames, GridConfig, MARGIN_FN_DICT, get_grid_config, get_sqm_config
-from processig import build_sqm_defined_ligths
-
-from typing import Self, Callable
-from pathlib import Path
-from numpy import ndarray
-from datetime import datetime
-from geopandas import read_file, list_layers, GeoDataFrame
-from geopandas.array import GeometryArray
-from functools import lru_cache
-
-def get_default_config() -> dict:
-    import json
-    with open("config.json", "r") as f:
-        config = json.load(f)
-    return config
-
-def get_attribute_names(default_config: dict) -> AttributeNames:
-    return AttributeNames(
-        power=default_config["default_power_columname"],
-        eficiency=default_config["default_efficiency_columname"]
+from config import (
+    AttributeNames, GridConfig, MARGIN_FN_DICT, 
+    get_grid_config, get_sqm_config, get_attribute_names, 
+    get_default_config
     )
+from processig import build_sqm_defined_ligths, build_grid
 
-
-def points_to_geodf(points: GeometryArray, sqm: ndarray):
-    d = {"Value": sqm.flat, "geometry": points}
-    geo_df = GeoDataFrame(d)
-    return geo_df
-
+from typing import Callable
+from pathlib import Path
+from datetime import datetime
 
 def build_output_path(output_dir: Path, grid_config: GridConfig) -> Path:
     time = datetime.now().strftime(format="%Y_%m_%d %H_%M_%S")
@@ -45,25 +26,9 @@ def build_output_path(output_dir: Path, grid_config: GridConfig) -> Path:
     )
     return output_dir / filename
 
-
-def export(geo_df: GeoDataFrame, output_path: Path) -> Path:
-    geo_df.to_file(output_path)
-    return output_path
-
-
-
-
-def filter_geodf(
-        geodf: GeoDataFrame,
-        column: str,
-        equals_to: str) -> GeoDataFrame:
-    return geodf.loc[geodf[column] == equals_to].copy()
-
-
 def clean_path_sting(path: str) -> Path:
     path = path.strip('"').strip("'").strip()
     return Path(path)
-
 
 def ask_for_input():
     points_path = input("Ingrese la ruta del archivo de puntos (shapefile o geopackage): \n")
@@ -72,7 +37,6 @@ def ask_for_input():
         raise FileNotFoundError(f"No se encontró el archivo en {points_path}")
     return points_path
 
-
 def ask_for_output_dir(output_dir_str: str) -> Path:
     output_dir = clean_path_sting(output_dir_str)
     if not output_dir.exists():
@@ -80,76 +44,6 @@ def ask_for_output_dir(output_dir_str: str) -> Path:
     if not output_dir.is_dir():
         raise ValueError(f"{output_dir} no es un directorio válido")
     return output_dir
-
-
-class GeoFile:
-    def __init__(self, file_path: Path):
-        self.layer = None
-        self._geo_data = None
-        self.file_path = file_path
-
-    @property
-    @lru_cache
-    def file_type(self) -> FileType:
-        return get_file_type(self.file_path)
-
-    @property
-    def geodata(self) -> GeoDataFrame:
-        if self._geo_data is None:
-            self._geo_data = read_file(filename=self.file_path, layer=self.layer)
-        return self._geo_data
-
-    @property
-    def columns(self):
-        cols = self.geodata.columns.to_list()
-        cols.remove("geometry")
-        return {idx: col for idx, col in enumerate(cols)}
-
-    def filter_data(self, column: str, equals_to: str) -> Self:
-        self._validate_column(column)
-        self._geo_data = filter_geodf(geodf=self.geodata, column=column, equals_to=equals_to)
-        return self
-
-    def valids_to_filter_values(self, column: str):
-        self._validate_column(column)
-        return self.geodata[column].unique().tolist()
-
-    def _validate_column(self, column: str):
-        if column not in self.columns.values():
-            raise ColumnNotFoundError(column, self.file_path)
-
-
-class GPKGFile(GeoFile):
-    def __init__(self, file_path: Path):
-        super().__init__(file_path)
-
-    @property
-    @lru_cache
-    def layers(self):
-        return list_layers(self.file_path)
-
-    def set_layer(self, layer_index: str):
-        layer = int(layer_index)
-        if layer < 0 or layer >= len(self.layers):
-            raise ValueError(f"Índice de capa inválido. Ingrese un número entre 0 y {len(self.layers) - 1}")
-        layer = self.layers.iloc[int(layer_index)]["name"]
-        self.layer = layer
-        return self
-
-
-class SHPFile(GeoFile):
-    def __init__(self, file_path: Path):
-        super().__init__(file_path)
-
-
-def get_file(file_path: Path) -> GeoFile | None:
-    file_type = get_file_type(file_path)
-    file_transport: dict[FileType, GeoFile] = {
-        FileType.GEOPACKAGE: GPKGFile(file_path),
-        FileType.SHAPEFILE: SHPFile(file_path)
-    }
-    return file_transport.get(file_type)
-
 
 def ask_until_valid(
         prompt: str,
@@ -231,7 +125,6 @@ def new_grid_config_process() -> GridConfig | None:
     log.info(f"Nueva configuración de grilla: {new_config}")
     return new_config
 
-
 def load_file() -> GeoFile:
     log = get_logger()
     while True:
@@ -241,13 +134,12 @@ def load_file() -> GeoFile:
             log.warning(str(e))
             print(str(e))
             continue
-        file = get_file(file_path)
+        file = get_geofile(file_path)
         if file is not None:
             log.info(f"Archivo cargado: {file_path}")
             return file
         log.warning(f"Archivo no soportado: {file_path}")
         print(f"Archivo no soportado: {file_path}. Intente nuevamente.")
-
 
 def select_layer(file: GPKGFile) -> GPKGFile:
     log = get_logger()
@@ -261,7 +153,6 @@ def select_layer(file: GPKGFile) -> GPKGFile:
     )
     log.info(f"Capa seleccionada: {selected.layer!r}")
     return selected
-
 
 def validate_columns(file: GeoFile, attributes_names: AttributeNames):
     log = get_logger()
@@ -280,25 +171,6 @@ def validate_columns(file: GeoFile, attributes_names: AttributeNames):
             attributes_names.power, attributes_names.eficiency))
         print("o actualice los nombres en el archivo de configuración.")
         exit(1)
-
-
-def build_grid(ligths: GeoDataFrame, grid_config: GridConfig) -> tuple[Grid, ndarray, ndarray]:
-    log = get_logger()
-    x_limits, y_limits = grid_range_from_geodf(
-        geo_df=ligths,
-        margin=grid_config.margin_from_points,
-        margin_fn=grid_config.margin_fn
-    )
-    grid = Grid(
-        *x_limits, *y_limits,
-        x_points=grid_config.n_grid_points,
-        y_points=grid_config.n_grid_points
-    )
-    xv, yv = grid.values
-    log.info(f"Grilla creada — n_grid_points={grid_config.n_grid_points}, shape={xv.shape}")
-    log.debug(f"x_limits={x_limits}, y_limits={y_limits}")
-    return grid, xv, yv
-
 
 def main():
     start_time = datetime.now()
@@ -349,6 +221,7 @@ def main():
 
         # Cálculo
         grid, xv, yv = build_grid(ligths, grid_config)
+        log.info(f"Grilla creada — n_grid_points={grid_config.n_grid_points}, shape={xv.shape}")
         scene = Scene()
         log.info("Iniciando cálculo de SQM ...")
         sqm = build_sqm_defined_ligths(scene, grid, ligths, attributes_names, sqm_config)
@@ -374,7 +247,6 @@ def main():
     except Exception as e:
         log.exception(f"Error inesperado: {e}")
         raise
-
 
 if __name__ == "__main__":
     main()

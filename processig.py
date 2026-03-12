@@ -1,9 +1,11 @@
 from model.model import Scene, Grid, get_skyglow
 from model.luminica import ModifiedLightSourceAlbersDuricoe
-from config import AttributeNames, SQMConfig
+from config import AttributeNames, SQMConfig, GridConfig
+from geo import grid_range_from_geodf
 
 from geopandas import GeoDataFrame
 from shapely import Point
+from numpy import ndarray
 
 def add_light_source(scene: Scene, x: float, y: float, light_flux: int):
     light_source = ModifiedLightSourceAlbersDuricoe(x, y, light_flux)
@@ -43,3 +45,18 @@ def build_sqm_defined_ligths(
         scene.add_light_source(ModifiedLightSourceAlbersDuricoe(x, y, flux))
     sqm = get_sqm(scene=scene, grid=grid, sqm_config=sqm_config)
     return sqm
+
+
+def build_grid(ligths: GeoDataFrame, grid_config: GridConfig) -> tuple[Grid, ndarray, ndarray]:
+    x_limits, y_limits = grid_range_from_geodf(
+        geo_df=ligths,
+        margin=grid_config.margin_from_points,
+        margin_fn=grid_config.margin_fn
+    )
+    grid = Grid(
+        *x_limits, *y_limits,
+        x_points=grid_config.n_grid_points,
+        y_points=grid_config.n_grid_points
+    )
+    xv, yv = grid.values
+    return grid, xv, yv
