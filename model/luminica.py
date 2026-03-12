@@ -42,12 +42,6 @@ CD_2_SQM_DICT = {
     "astroshop": cd_per_m2_to_sqm_astroshop
 }
 
-@dataclass
-class SQMConfig:
-    cd_2_sqm: Callable[[ndarray], ndarray]
-    natural_bg_skyglow: float
-    background_sqm: float
-
 ##################################################################
 # Fuente Luminosa
 
