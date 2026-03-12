@@ -1,4 +1,4 @@
-from numpy import linspace, meshgrid, sqrt, zeros, pi, ndarray
+from numpy import linspace, meshgrid, sqrt, zeros, ndarray
 from .luminica import (
     get_modified_skyglow,
     ModifiedLightSourceAlbersDuricoe
@@ -47,7 +47,7 @@ class Scene:
         distance = sqrt((xv - source.x) ** 2 + (yv - source.y) ** 2)
         return distance
 
-def get_skyglow(scene: Scene, grid: Grid, omega=4*pi):
+def get_skyglow(scene: Scene, grid: Grid):
     # Io: brillo artificial en el cénit del cielo
     skyglow = grid.zeros_matrix
     grid_values = grid.values
@@ -58,7 +58,6 @@ def get_skyglow(scene: Scene, grid: Grid, omega=4*pi):
         )
         skyglow += get_modified_skyglow(
             dist_matrix, 
-            source,
-            omega=omega
+            source.flux
         )
     return skyglow
