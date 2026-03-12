@@ -11,3 +11,7 @@ wheels/
 
 # vscode
 .vscode/
+
+# Logs
+logs/
+*.log
