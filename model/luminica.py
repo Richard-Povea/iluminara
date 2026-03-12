@@ -18,7 +18,7 @@ def cd_per_m2_to_sqm_zotti(cd_per_m2: ndarray) -> ndarray:
     sky_quality_magnitude = 12.603 - 2.5 * log10(cd_per_m2)
     return sky_quality_magnitude
 
-def cd_per_m2_to_sqm_astroshop(cd_per_m2: ndarray) -> ndarray:
+def cd_per_m2_to_sqm_astroshop(cd_per_m2: ndarray|float) -> ndarray|float:
     """
     :param ndarray cd_per_m2: Candelas por petro cuadrado
     :return: sky quality magnitude
@@ -30,6 +30,12 @@ def cd_per_m2_to_sqm_astroshop(cd_per_m2: ndarray) -> ndarray:
     # return SQM in [mag/arcseg2]
     sky_quality_magnitude = -2.5 * log10(cd_per_m2 / 10.8e4)
     return sky_quality_magnitude
+
+def r_astrohop(flux: float, sqm: float, omega: float=2*pi) -> float:
+    """
+    Función para obtener el radio a partir de la luminosidad y el sqm.
+    """
+    return ((flux*10**(sqm/2.5))/(4*omega*10.8e4))**(2/5)
 
 CD_2_SQM_DICT = {
     "zotti": cd_per_m2_to_sqm_zotti,
@@ -52,18 +58,18 @@ class ModifiedLightSourceAlbersDuricoe(Light):
         self.amount = amount
 
 def get_modified_skyglow(
-        r: ndarray, 
-        ligth: ModifiedLightSourceAlbersDuricoe,
-        omega=4*pi) -> ndarray:
+        r: ndarray|float, 
+        flux: float,
+        omega=2*pi) -> ndarray|float:
     """
     :param float flux: Luminous flux [Lumen]
     :param ndarray r: Distance between source and point. [m]
-    :param float omega: Solid angle in [sr]. Default: spherical source, omega = 4pi.
+    :param float omega: Solid angle in [sr]. Default: spherical source, omega = 2pi.
     :return: skyglow
     :rtype: ndarray
     """
     # flux: luminous flux [Lumen]
     # r: distance between source and point. [m]
     # omega: solid angle in [sr]. Default: spherical source, omega = 4pi.
-    skyglow = (ligth.flux  / (4 * omega)) * ligth.amount * (r ** (-2.5))
+    skyglow = (flux  / (4 * omega)) * (r ** (-2.5))
     return skyglow
