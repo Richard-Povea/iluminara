@@ -3,7 +3,7 @@ from geo import (
     GeoFile, GPKGFile, array2points,
     get_geofile, export, points_to_geodf
     )
-from errors import ColumnNotFoundError, DirectoryNotFoundError
+from errors import ColumnNotFoundError
 from logger import setup_logger, get_logger
 from config import (
     AttributeNames, GridConfig, MARGIN_FN_DICT, 
@@ -11,39 +11,11 @@ from config import (
     get_default_config
     )
 from processig import build_sqm_defined_ligths, build_grid
+from i_o import build_output_path, validate_output_dir, validate_path_input
 
 from typing import Callable
 from pathlib import Path
 from datetime import datetime
-
-def build_output_path(output_dir: Path, grid_config: GridConfig) -> Path:
-    time = datetime.now().strftime(format="%Y_%m_%d %H_%M_%S")
-    filename = "{}_points_{}_{}_{}.shp".format(
-        grid_config.n_grid_points,
-        grid_config.margin_from_points,
-        grid_config.margin_fn.__name__,
-        time
-    )
-    return output_dir / filename
-
-def clean_path_sting(path: str) -> Path:
-    path = path.strip('"').strip("'").strip()
-    return Path(path)
-
-def ask_for_input():
-    points_path = input("Ingrese la ruta del archivo de puntos (shapefile o geopackage): \n")
-    points_path = clean_path_sting(points_path)
-    if not points_path.exists():
-        raise FileNotFoundError(f"No se encontró el archivo en {points_path}")
-    return points_path
-
-def ask_for_output_dir(output_dir_str: str) -> Path:
-    output_dir = clean_path_sting(output_dir_str)
-    if not output_dir.exists():
-        raise DirectoryNotFoundError(output_dir)
-    if not output_dir.is_dir():
-        raise ValueError(f"{output_dir} no es un directorio válido")
-    return output_dir
 
 def ask_until_valid(
         prompt: str,
@@ -129,7 +101,8 @@ def load_file() -> GeoFile:
     log = get_logger()
     while True:
         try:
-            file_path = ask_for_input()
+            points_path = input("Ingrese la ruta del archivo de puntos (shapefile o geopackage): \n")
+            file_path = validate_path_input(points_path)
         except FileNotFoundError as e:
             log.warning(str(e))
             print(str(e))
@@ -197,7 +170,7 @@ def main():
         print("¿Dónde desea guardar el archivo resultante?")
         output_dir: Path = ask_until_valid(
             prompt="Ingrese la ruta:\n",
-            validator=lambda v: ask_for_output_dir(v),
+            validator=lambda v: validate_output_dir(v),
             error_msg="Directorio inválido. Intente nuevamente."
         )
         log.info(f"Directorio de salida: {output_dir}")
