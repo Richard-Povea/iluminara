@@ -50,3 +50,15 @@ def get_sqm_config(default_config: dict) -> SQMConfig:
         natural_bg_skyglow=default_config["natural_background_skyglow"],
         background_sqm=default_config["background_sqm"]
     )
+
+def get_default_config() -> dict:
+    import json
+    with open("config.json", "r") as f:
+        config = json.load(f)
+    return config
+
+def get_attribute_names(default_config: dict) -> AttributeNames:
+    return AttributeNames(
+        power=default_config["default_power_columname"],
+        eficiency=default_config["default_efficiency_columname"]
+    )
