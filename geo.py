@@ -6,11 +6,10 @@ from typing import Callable, Self
 from functools import lru_cache
 from pathlib import Path
 
-from state import FileType, get_file_type
 from errors import ColumnNotFoundError
 from logger import get_logger
 from config import AttributeNames
-from geo_types import limit, x_y_limits
+from model.types import limit, x_y_limits, FileType, get_file_type
 
 def get_points_range_from_shapefile(geo_df: GeoDataFrame) -> tuple[float, float, float, float]:
     # shape: desde geopandas gpd.read_file(...)

@@ -2,7 +2,7 @@ from typing import Callable
 from dataclasses import dataclass
 from numpy import ndarray
 
-from geo_types import limit, x_y_limits, percentage_margin, flat_margin
+from model.types import limit, x_y_limits, percentage_margin, flat_margin
 from model.luminica import CD_2_SQM_DICT
 
 MARGIN_FN_DICT = {

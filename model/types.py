@@ -1,4 +1,6 @@
 from typing import Iterable
+from enum import Enum, auto
+from pathlib import Path
 
 type limit = Iterable[float]
 type x_y_limits = Iterable[limit]
@@ -31,3 +33,15 @@ def percentage_margin(
     new_x_limits = get_new_limts(x_limits, margin_tuple)
     new_y_limits = get_new_limts(y_limits, margin_tuple)
     return new_x_limits, new_y_limits
+
+class FileType(Enum):
+    SHAPEFILE = auto()
+    GEOPACKAGE = auto()
+
+def get_file_type(file_path: Path) -> FileType:
+    if file_path.suffix.lower() == ".shp":
+        return FileType.SHAPEFILE
+    elif file_path.suffix.lower() in [".gpkg", ".geopackage"]:
+        return FileType.GEOPACKAGE
+    else:
+        raise ValueError(f"Unsupported file type: {file_path.suffix}")
